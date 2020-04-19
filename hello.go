@@ -16,7 +16,10 @@ import (
     "database/sql"
     "log"
     _ "github.com/go-sql-driver/mysql" 
+
+    jwt "github.com/dgrijalva/jwt-go"
 )
+var secretKey = "himitu"
 
 // jsonのSchema
 type InputJsonSchema struct {
@@ -76,6 +79,23 @@ func main() {
                 defer rows.Close()
                 if err != nil {
                     panic(err.Error())
+                }
+
+
+                //認証
+                //アルゴリズムの指定
+                token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+                    "id":"test",
+                })
+
+                
+                //トークンに対して署名
+                tokenString, err_JWT := token.SignedString([]byte(secretKey))
+                if err_JWT == nil {
+                    fmt.Fprint(w, "json hello!\n")
+                    fmt.Printf("POST hello! %s \n", tokenString)
+                } else {
+                    fmt.Fprint(w, "Not Json hello!\n")
                 }
 
 
