@@ -52,7 +52,10 @@ func main() {
 
                 // w.WriteHeader(http.StatusCreated)
                 // fmt.Fprint(w, "POST hello! %v \n", hello.Name)
-                fmt.Printf("POST hello! %v \n", hello)
+                fmt.Printf("POST hello! %s \n", string(hello.Name))
+
+
+
 
 
 
@@ -67,11 +70,19 @@ func main() {
                 defer db.Close()
 
                 //データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
-                rows, err := db.Query("INSERT USER VALUES (1, 'Satou', 'Kyoto');")
+                // rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
+                rows, err := db.Query("INSERT INTO USER(name) VALUES ('" + string(hello.Name) + "');")
+                // rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
                 defer rows.Close()
                 if err != nil {
                     panic(err.Error())
                 }
+
+
+
+
+
+
 
             default:
                 // w.WriteHeader(http.StatusMethodNotAllowed)
