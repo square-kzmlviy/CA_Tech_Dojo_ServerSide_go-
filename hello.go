@@ -54,6 +54,25 @@ func main() {
                 // fmt.Fprint(w, "POST hello! %v \n", hello.Name)
                 fmt.Printf("POST hello! %v \n", hello)
 
+
+
+                //mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
+                db, err := sql.Open("mysql", "root@/ca_tech_dojo")
+                log.Println("Connected to mysql.")
+
+                //接続でエラーが発生した場合の処理
+                if err != nil {
+                    log.Fatal(err)
+                }
+                defer db.Close()
+
+                //データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
+                rows, err := db.Query("INSERT USER VALUES (1, 'Satou', 'Kyoto');")
+                defer rows.Close()
+                if err != nil {
+                    panic(err.Error())
+                }
+
             default:
                 // w.WriteHeader(http.StatusMethodNotAllowed)
                 fmt.Fprint(w, "Method not allowed.\n")
