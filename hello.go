@@ -26,6 +26,11 @@ type InputJsonSchema struct {
     Name string `json:"name"`
 }
 
+type NewUser struct {
+    ID   int `json:"id"`
+    Name string `json:"name"`
+}
+
 func main() {
     http.HandleFunc("/user/create", func(w http.ResponseWriter, r *http.Request) {
     // request bodyの読み取り
@@ -74,7 +79,7 @@ func main() {
 
                 //データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
                 // rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
-                rows, err := db.Query("INSERT INTO USER(name) VALUES ('" + string(hello.Name) + "');")
+                rows, err := db.Query("INSERT INTO USER(name,token) VALUES ('" + string(hello.Name) + "','init');")
                 // rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
                 defer rows.Close()
                 if err != nil {
@@ -82,10 +87,35 @@ func main() {
                 }
 
 
+                // // INSERTしたレコードを読めるかテスト
+                // LIMIT := 1
+                rows_out_user, err_out_user := db.Query("SELECT id,name FROM user ORDER BY id DESC LIMIT 1;")
+                defer rows_out_user.Close()
+                if err_out_user != nil {
+                    panic(err_out_user.Error())
+                }
+                var person NewUser //構造体Person型の変数personを定義
+                //レコード一件一件をあらかじめ用意しておいた構造体に当てはめていく。
+                for rows_out_user.Next() {
+                    
+                    err := rows_out_user.Scan(&person.ID, &person.Name)
+                    sample_json, _ := json.Marshal(person)
+            
+                    if err != nil {
+                        panic(err_out_user.Error())
+                    }
+                    fmt.Println(person.ID, person.Name)
+                    fmt.Println(string(sample_json))
+                }
+            
+                
+
+
                 //認証
                 //アルゴリズムの指定
                 token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-                    "id":"test",
+                    "id":person.ID,
+                    "name":person.Name,
                 })
 
                 
