@@ -31,6 +31,9 @@ type NewUser struct {
     Name string `json:"name"`
 }
 
+type Response struct {
+    TOKEN   int `json:"token"`
+}
 func main() {
     http.HandleFunc("/user/create", func(w http.ResponseWriter, r *http.Request) {
     // request bodyの読み取り
