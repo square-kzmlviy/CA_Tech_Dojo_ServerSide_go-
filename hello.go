@@ -18,6 +18,7 @@ import (
     _ "github.com/go-sql-driver/mysql" 
 
     jwt "github.com/dgrijalva/jwt-go"
+    "strconv"
 )
 var secretKey = "himitu"
 
@@ -170,10 +171,44 @@ func main() {
                     var user NewUser
                     user.ID = int(claims["id"].(float64))
                     user.Name = claims["name"].(string)
-                    json_res, _ := json.Marshal(user)
+                    // json_res, _ := json.Marshal(user)
                     // fmt.Println(string(json_res))
                     // fmt.Println(user.ID)
+
+                    str_id := strconv.Itoa(user.ID)
+                    // fmt.Println(str_id)
+
+
+                     //mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
+                    db, err := sql.Open("mysql", "root@/ca_tech_dojo")
+                    log.Println("Connected to mysql.")
+
+                    //接続でエラーが発生した場合の処理
+                    if err != nil {
+                        log.Fatal(err)
+                    }
+                    defer db.Close()
+
+                    //データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
+                    // rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
+                    rows, err := db.Query("SELECT id,name FROM user WHERE id = " + str_id + ";")
+                    // rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
+                    defer rows.Close()
+                    if err != nil {
+                        panic(err.Error())
+                    }
+
+                    for rows.Next() {
                     
+                        err := rows.Scan(&user.ID, &user.Name)
+                        res_json, _ := json.Marshal(user)
+                
+                        if err != nil {
+                            panic(err.Error())
+                        }
+                        // fmt.Println(person.ID, person.Name)
+                        fmt.Println(string(res_json))
+                    }
 
 
     
