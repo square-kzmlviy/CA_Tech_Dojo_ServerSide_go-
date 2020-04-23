@@ -161,7 +161,19 @@ func main() {
                     }
                     claims := token.Claims.(jwt.MapClaims)
                     //解釈したPAYLOAD:DATA ["name"]の確認
-                    fmt.Println(claims["name"].(string))
+
+                    // fmt.Println(claims["name"].(string))
+                    // claims_id := claims["id"]
+                    // fmt.Println(claims_id)
+
+
+                    var user NewUser
+                    user.ID = int(claims["id"].(float64))
+                    user.Name = claims["name"].(string)
+                    json_res, _ := json.Marshal(user)
+                    // fmt.Println(string(json_res))
+                    // fmt.Println(user.ID)
+                    
 
 
     
