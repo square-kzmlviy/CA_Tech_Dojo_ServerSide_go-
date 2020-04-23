@@ -32,6 +32,9 @@ type NewUser struct {
 }
 
 func main() {
+
+
+
     http.HandleFunc("/user/create", func(w http.ResponseWriter, r *http.Request) {
     // request bodyの読み取り
 
@@ -39,9 +42,6 @@ func main() {
         fmt.Fprintf(w, "<h1>Test</h1>")
 
         switch r.Method {
-            case http.MethodGet:
-                w.WriteHeader(http.StatusOK)
-                fmt.Fprint(w, "GET hello!\n")
 
 
             case http.MethodPost:
@@ -61,10 +61,6 @@ func main() {
                 // w.WriteHeader(http.StatusCreated)
                 // fmt.Fprint(w, "POST hello! %v \n", hello.Name)
                 fmt.Printf("POST hello! %s \n", string(hello.Name))
-
-
-
-
 
 
                 //mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
@@ -129,11 +125,6 @@ func main() {
                 }
 
 
-
-
-
-
-
             default:
                 // w.WriteHeader(http.StatusMethodNotAllowed)
                 fmt.Fprint(w, "Method not allowed.\n")
@@ -142,6 +133,35 @@ func main() {
 
         }
     })
+
+    http.HandleFunc("/user/get", func(w http.ResponseWriter, r *http.Request) {
+        // request bodyの読み取り
+    
+             //test
+            fmt.Fprintf(w, "<h1>Test</h1>")
+    
+            switch r.Method {
+    
+    
+                case http.MethodGet:
+                    // w.WriteHeader(http.StatusCreated)
+                    fmt.Fprint(w, "POST hello!\n")
+    
+                    header_x_token := r.Header.Get("x-token")
+                    // //headerが読み込まれている確認
+                    // fmt.Println(header_x_token)
+    
+    
+                default:
+                    // w.WriteHeader(http.StatusMethodNotAllowed)
+                    fmt.Fprint(w, "Method not allowed.\n")
+    
+                    // ody := r.Body
+    
+            }
+        })
+
+
 
     http.ListenAndServe(":8080", nil)
 }
