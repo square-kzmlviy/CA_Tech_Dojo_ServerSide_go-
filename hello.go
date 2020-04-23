@@ -150,6 +150,20 @@ func main() {
                     header_x_token := r.Header.Get("x-token")
                     // //headerが読み込まれている確認
                     // fmt.Println(header_x_token)
+
+
+                    //tokenの解釈
+                    token, err := jwt.Parse(header_x_token, func(token *jwt.Token) (interface{}, error) {
+                        return []byte("himitu"), nil // CreateTokenにて指定した文字列を使います
+                    })
+                    if err != nil {
+                        log.Fatal(err)
+                    }
+                    claims := token.Claims.(jwt.MapClaims)
+                    //解釈したPAYLOAD:DATA ["name"]の確認
+                    fmt.Println(claims["name"].(string))
+
+
     
     
                 default:
