@@ -243,97 +243,96 @@ func main() {
 
 
 
-    
-    
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    //update//////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
     http.HandleFunc("/user/update", func(w http.ResponseWriter, r *http.Request) {
         // request bodyの読み取り
     
-                //test
-            fmt.Fprintf(w, "<h1>Test</h1>")
-    
-            switch r.Method {
-    
-    
-                case http.MethodGet:
-                    // w.WriteHeader(http.StatusCreated)
-                    fmt.Fprint(w, "POST hello!\n")
-    
-                    header_x_token := r.Header.Get("x-token")
-                    // //headerが読み込まれている確認
-                    // fmt.Println(header_x_token)
+            //test
+        // fmt.Fprintf(w, "<h1>Test</h1>")
+
+        switch r.Method {
 
 
-                    //tokenの解釈
-                    token, err := jwt.Parse(header_x_token, func(token *jwt.Token) (interface{}, error) {
-                        return []byte("himitu"), nil // CreateTokenにて指定した文字列を使います
-                    })
-                    if err != nil {
-                        log.Fatal(err)
-                    }
-                    claims := token.Claims.(jwt.MapClaims)
-                    //解釈したPAYLOAD:DATA ["name"]の確認
+            case http.MethodPut:
+                // w.WriteHeader(http.StatusCreated)
+                fmt.Fprint(w, "POST hello!\n")
 
-                    // fmt.Println(claims["name"].(string))
-                    // claims_id := claims["id"]
-                    // fmt.Println(claims_id)
+                body := r.Body
+                defer body.Close()
+
+                buf := new(bytes.Buffer)
+                io.Copy(buf, body)
 
 
-                    var user NewUser
-                    user.ID = int(claims["id"].(float64))
-                    user.Name = claims["name"].(string)
-                    // json_res, _ := json.Marshal(user)
-                    // fmt.Println(string(json_res))
-                    // fmt.Println(user.ID)
+                var rename InputJsonSchema
+                json.Unmarshal(buf.Bytes(), &rename)
 
-                    str_id := strconv.Itoa(user.ID)
-                    // fmt.Println(str_id)
+                header_x_token := r.Header.Get("x-token")
+                // //headerが読み込まれている確認
+                // fmt.Println(header_x_token)
 
 
-                        //mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
-                    db, err := sql.Open("mysql", "root@/ca_tech_dojo")
-                    log.Println("Connected to mysql.")
+                //tokenの解釈
+                token, err := jwt.Parse(header_x_token, func(token *jwt.Token) (interface{}, error) {
+                    return []byte("himitu"), nil // CreateTokenにて指定した文字列を使います
+                })
+                if err != nil {
+                    log.Fatal(err)
+                }
+                claims := token.Claims.(jwt.MapClaims)
+                //解釈したPAYLOAD:DATA ["name"]の確認
 
-                    //接続でエラーが発生した場合の処理
-                    if err != nil {
-                        log.Fatal(err)
-                    }
-                    defer db.Close()
+                // fmt.Println(claims["name"].(string))
+                // claims_id := claims["id"]
+                // fmt.Println(claims_id)
 
-                    //データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
-                    // rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
-                    rows, err := db.Query("SELECT name FROM user WHERE id = " + str_id + ";")
-                    // rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
-                    defer rows.Close()
-                    if err != nil {
-                        panic(err.Error())
-                    }
 
-                    for rows.Next() {
-                        
-                        var res_data InputJsonSchema
-                        err := rows.Scan(&res_data.Name)
-                        res_json, _ := json.Marshal(res_data)
+                var user NewUser
+                user.ID = int(claims["id"].(float64))
+                user.Name = claims["name"].(string)
+                // json_res, _ := json.Marshal(user)
+                // fmt.Println(string(json_res))
+                // fmt.Println(user.ID)
+
+                str_id := strconv.Itoa(user.ID)
+                // fmt.Println(str_id)
+
+
+                    //mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
+                db, err := sql.Open("mysql", "root@/ca_tech_dojo")
+                log.Println("Connected to mysql.")
+
+                //接続でエラーが発生した場合の処理
+                if err != nil {
+                    log.Fatal(err)
+                }
+                defer db.Close()
+
+                //データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
+                // rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
+                rows, err := db.Query("UPDATE user SET name ='" + string(rename.Name) + "' WHERE id = " + str_id + ";")
+                // rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
+                defer rows.Close()
+                if err != nil {
+                    panic(err.Error())
+                }
+
                 
-                        if err != nil {
-                            panic(err.Error())
-                        }
-                        // fmt.Println(person.ID, person.Name)
-                        fmt.Println(string(res_json))
-                        w.Header().Set("Content-Type", "application/json")
-                        w.Write(res_json)
-                    }
 
 
-    
-    
-                default:
-                    // w.WriteHeader(http.StatusMethodNotAllowed)
-                    fmt.Fprint(w, "Method not allowed.\n")
-    
-                    // ody := r.Body
-    
-            }
-        })
+
+
+            default:
+                // w.WriteHeader(http.StatusMethodNotAllowed)
+                fmt.Fprint(w, "Method not allowed.\n")
+
+                // ody := r.Body
+
+        }
+    })
 
 
 
