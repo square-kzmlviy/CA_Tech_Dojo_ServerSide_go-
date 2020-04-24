@@ -5,20 +5,7 @@ import (
 
     "net/http"
 )
-var secretKey = "himitu"
 
-// jsonのSchema
-type InputJsonSchema struct {
-    Name string `json:"name"`
-}
-
-type NewUser struct {
-    ID   int `json:"id"`
-    Name string `json:"name"`
-}
-type Token struct {
-    Token string `json:"token"`
-}
 
 func main() {
 
