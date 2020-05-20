@@ -126,9 +126,6 @@ func Get(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "POST hello!\n")
 
 		header_x_token := r.Header.Get("x-token")
-		// //headerが読み込まれている確認
-		// fmt.Println(header_x_token)
-
 		//tokenの解釈
 		token, err := jwt.Parse(header_x_token, func(token *jwt.Token) (interface{}, error) {
 			return []byte("himitu"), nil // CreateTokenにて指定した文字列を使います
