@@ -1,322 +1,281 @@
 package page
+
 import (
-    "encoding/json"
-    "fmt"
-    // "io/ioutil"
-    "net/http"
-    // "Request.Body"
+	"encoding/json"
+	"fmt"
+	// "io/ioutil"
+	"net/http"
+	// "Request.Body"
 
-    // ?
-    "bytes"
-    // ?
-    "io"
+	// ?
+	"bytes"
+	// ?
+	"io"
 
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
+	"log"
 
-    "database/sql"
-    "log"
-    _ "github.com/go-sql-driver/mysql" 
-
-    jwt "github.com/dgrijalva/jwt-go"
-    "strconv"
-
+	jwt "github.com/dgrijalva/jwt-go"
+	"strconv"
 )
 
 var secretKey = "himitu"
 
 // jsonのSchema
 type InputJsonSchema struct {
-    Name string `json:"name"`
+	Name string `json:"name"`
 }
 
 type NewUser struct {
-    ID   int `json:"id"`
-    Name string `json:"name"`
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 type Token struct {
-    Token string `json:"token"`
+	Token string `json:"token"`
 }
+
 func Create(w http.ResponseWriter, r *http.Request) {
-    // request bodyの読み取り
-        
-        //test
-    fmt.Fprintf(w, "<h1>Test</h1>")
 
-    switch r.Method {
+	fmt.Fprintf(w, "<h1>Test</h1>")
 
+	switch r.Method {
 
-        case http.MethodPost:
-            // w.WriteHeader(http.StatusCreated)
-            fmt.Fprint(w, "POST hello!\n")
+	case http.MethodPost:
 
-            body := r.Body
-            defer body.Close()
+		fmt.Fprint(w, "POST hello!\n")
+		body := r.Body
+		defer body.Close()
+		buf := new(bytes.Buffer)
+		io.Copy(buf, body)
+		var hello InputJsonSchema
+		json.Unmarshal(buf.Bytes(), &hello)
+		fmt.Printf("POST hello! %s \n", string(hello.Name))
 
-            buf := new(bytes.Buffer)
-            io.Copy(buf, body)
+		db, err := sql.Open("mysql", "root@/ca_tech_dojo")
+		log.Println("Connected to mysql.")
 
+		//接続でエラーが発生した場合の処理
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
 
-            var hello InputJsonSchema
-            json.Unmarshal(buf.Bytes(), &hello)
+		//データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
+		rows, err := db.Query("INSERT INTO USER(name,token) VALUES ('" + string(hello.Name) + "','init');")
+		defer rows.Close()
+		if err != nil {
+			panic(err.Error())
+		}
 
-            // w.WriteHeader(http.StatusCreated)
-            // fmt.Fprint(w, "POST hello! %v \n", hello.Name)
-            fmt.Printf("POST hello! %s \n", string(hello.Name))
+		// INSERTしたレコードを読めるかテスト
+		rows_out_user, err_out_user := db.Query("SELECT id,name FROM user ORDER BY id DESC LIMIT 1;")
+		defer rows_out_user.Close()
+		if err_out_user != nil {
+			panic(err_out_user.Error())
+		}
+		var person NewUser //構造体Person型の変数personを定義
+		//レコード一件一件をあらかじめ用意しておいた構造体に当てはめていく。
+		for rows_out_user.Next() {
 
+			err := rows_out_user.Scan(&person.ID, &person.Name)
+			sample_json, _ := json.Marshal(person)
 
-            //mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
-            db, err := sql.Open("mysql", "root@/ca_tech_dojo")
-            log.Println("Connected to mysql.")
+			if err != nil {
+				panic(err_out_user.Error())
+			}
+			fmt.Println(person.ID, person.Name)
+			fmt.Println(string(sample_json))
+		}
 
-            //接続でエラーが発生した場合の処理
-            if err != nil {
-                log.Fatal(err)
-            }
-            defer db.Close()
+		//認証
+		//アルゴリズムの指定
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"id":   person.ID,
+			"name": person.Name,
+		})
 
-            //データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
-            // rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
-            rows, err := db.Query("INSERT INTO USER(name,token) VALUES ('" + string(hello.Name) + "','init');")
-            // rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
-            defer rows.Close()
-            if err != nil {
-                panic(err.Error())
-            }
+		//トークンに対して署名
+		tokenString, err_JWT := token.SignedString([]byte(secretKey))
+		if err_JWT == nil {
+			fmt.Fprint(w, "json hello!\n")
+			fmt.Printf("POST hello! %s \n", tokenString)
 
+			var token Token
+			token.Token = tokenString
+			res_json, _ := json.Marshal(token)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(res_json)
 
-            // // INSERTしたレコードを読めるかテスト
-            // LIMIT := 1
-            rows_out_user, err_out_user := db.Query("SELECT id,name FROM user ORDER BY id DESC LIMIT 1;")
-            defer rows_out_user.Close()
-            if err_out_user != nil {
-                panic(err_out_user.Error())
-            }
-            var person NewUser //構造体Person型の変数personを定義
-            //レコード一件一件をあらかじめ用意しておいた構造体に当てはめていく。
-            for rows_out_user.Next() {
-                
-                err := rows_out_user.Scan(&person.ID, &person.Name)
-                sample_json, _ := json.Marshal(person)
-        
-                if err != nil {
-                    panic(err_out_user.Error())
-                }
-                fmt.Println(person.ID, person.Name)
-                fmt.Println(string(sample_json))
-            }
-        
-            
+		} else {
+			fmt.Fprint(w, "Not Json hello!\n")
+		}
 
+	default:
+		// w.WriteHeader(http.StatusMethodNotAllowed)
+		fmt.Fprint(w, "Method not allowed.\n")
 
-            //認証
-            //アルゴリズムの指定
-            token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-                "id":person.ID,
-                "name":person.Name,
-            })
+		// ody := r.Body
 
-            
-            //トークンに対して署名
-            tokenString, err_JWT := token.SignedString([]byte(secretKey))
-            if err_JWT == nil {
-                fmt.Fprint(w, "json hello!\n")
-                fmt.Printf("POST hello! %s \n", tokenString)
-
-                var token Token
-                token.Token = tokenString
-                res_json, _ := json.Marshal(token)
-                w.Header().Set("Content-Type", "application/json")
-                w.Write(res_json)
-
-
-
-
-            } else {
-                fmt.Fprint(w, "Not Json hello!\n")
-            }
-
-
-        default:
-            // w.WriteHeader(http.StatusMethodNotAllowed)
-            fmt.Fprint(w, "Method not allowed.\n")
-
-            // ody := r.Body
-
-    }
+	}
 }
 
 func Get(w http.ResponseWriter, r *http.Request) {
-    // request bodyの読み取り
+	// request bodyの読み取り
 
-        //test
-    fmt.Fprintf(w, "<h1>Test</h1>")
+	//test
+	fmt.Fprintf(w, "<h1>Test</h1>")
 
-    switch r.Method {
+	switch r.Method {
 
+	case http.MethodGet:
+		// w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, "POST hello!\n")
 
-        case http.MethodGet:
-            // w.WriteHeader(http.StatusCreated)
-            fmt.Fprint(w, "POST hello!\n")
+		header_x_token := r.Header.Get("x-token")
+		// //headerが読み込まれている確認
+		// fmt.Println(header_x_token)
 
-            header_x_token := r.Header.Get("x-token")
-            // //headerが読み込まれている確認
-            // fmt.Println(header_x_token)
+		//tokenの解釈
+		token, err := jwt.Parse(header_x_token, func(token *jwt.Token) (interface{}, error) {
+			return []byte("himitu"), nil // CreateTokenにて指定した文字列を使います
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		claims := token.Claims.(jwt.MapClaims)
+		//解釈したPAYLOAD:DATA ["name"]の確認
 
+		// fmt.Println(claims["name"].(string))
+		// claims_id := claims["id"]
+		// fmt.Println(claims_id)
 
-            //tokenの解釈
-            token, err := jwt.Parse(header_x_token, func(token *jwt.Token) (interface{}, error) {
-                return []byte("himitu"), nil // CreateTokenにて指定した文字列を使います
-            })
-            if err != nil {
-                log.Fatal(err)
-            }
-            claims := token.Claims.(jwt.MapClaims)
-            //解釈したPAYLOAD:DATA ["name"]の確認
+		var user NewUser
+		user.ID = int(claims["id"].(float64))
+		user.Name = claims["name"].(string)
+		// json_res, _ := json.Marshal(user)
+		// fmt.Println(string(json_res))
+		// fmt.Println(user.ID)
 
-            // fmt.Println(claims["name"].(string))
-            // claims_id := claims["id"]
-            // fmt.Println(claims_id)
+		str_id := strconv.Itoa(user.ID)
+		// fmt.Println(str_id)
 
+		//mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
+		db, err := sql.Open("mysql", "root@/ca_tech_dojo")
+		log.Println("Connected to mysql.")
 
-            var user NewUser
-            user.ID = int(claims["id"].(float64))
-            user.Name = claims["name"].(string)
-            // json_res, _ := json.Marshal(user)
-            // fmt.Println(string(json_res))
-            // fmt.Println(user.ID)
+		//接続でエラーが発生した場合の処理
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
 
-            str_id := strconv.Itoa(user.ID)
-            // fmt.Println(str_id)
+		//データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
+		// rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
+		rows, err := db.Query("SELECT name FROM user WHERE id = " + str_id + ";")
+		// rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
+		defer rows.Close()
+		if err != nil {
+			panic(err.Error())
+		}
 
+		for rows.Next() {
 
-                //mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
-            db, err := sql.Open("mysql", "root@/ca_tech_dojo")
-            log.Println("Connected to mysql.")
+			var res_data InputJsonSchema
+			err := rows.Scan(&res_data.Name)
+			res_json, _ := json.Marshal(res_data)
 
-            //接続でエラーが発生した場合の処理
-            if err != nil {
-                log.Fatal(err)
-            }
-            defer db.Close()
+			if err != nil {
+				panic(err.Error())
+			}
+			// fmt.Println(person.ID, person.Name)
+			fmt.Println(string(res_json))
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(res_json)
+		}
 
-            //データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
-            // rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
-            rows, err := db.Query("SELECT name FROM user WHERE id = " + str_id + ";")
-            // rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
-            defer rows.Close()
-            if err != nil {
-                panic(err.Error())
-            }
+	default:
+		// w.WriteHeader(http.StatusMethodNotAllowed)
+		fmt.Fprint(w, "Method not allowed.\n")
 
-            for rows.Next() {
-                
-                var res_data InputJsonSchema
-                err := rows.Scan(&res_data.Name)
-                res_json, _ := json.Marshal(res_data)
-        
-                if err != nil {
-                    panic(err.Error())
-                }
-                // fmt.Println(person.ID, person.Name)
-                fmt.Println(string(res_json))
-                w.Header().Set("Content-Type", "application/json")
-                w.Write(res_json)
-            }
+		// ody := r.Body
 
-
-
-
-        default:
-            // w.WriteHeader(http.StatusMethodNotAllowed)
-            fmt.Fprint(w, "Method not allowed.\n")
-
-            // ody := r.Body
-
-    }
+	}
 }
 
 func Update(w http.ResponseWriter, r *http.Request) {
-    // request bodyの読み取り
+	// request bodyの読み取り
 
-        //test
-    // fmt.Fprintf(w, "<h1>Test</h1>")
+	//test
+	// fmt.Fprintf(w, "<h1>Test</h1>")
 
-    switch r.Method {
+	switch r.Method {
 
+	case http.MethodPut:
+		// w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, "POST hello!\n")
 
-        case http.MethodPut:
-            // w.WriteHeader(http.StatusCreated)
-            fmt.Fprint(w, "POST hello!\n")
+		body := r.Body
+		defer body.Close()
 
-            body := r.Body
-            defer body.Close()
+		buf := new(bytes.Buffer)
+		io.Copy(buf, body)
 
-            buf := new(bytes.Buffer)
-            io.Copy(buf, body)
+		var rename InputJsonSchema
+		json.Unmarshal(buf.Bytes(), &rename)
 
+		header_x_token := r.Header.Get("x-token")
+		// //headerが読み込まれている確認
+		// fmt.Println(header_x_token)
 
-            var rename InputJsonSchema
-            json.Unmarshal(buf.Bytes(), &rename)
+		//tokenの解釈
+		token, err := jwt.Parse(header_x_token, func(token *jwt.Token) (interface{}, error) {
+			return []byte("himitu"), nil // CreateTokenにて指定した文字列を使います
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		claims := token.Claims.(jwt.MapClaims)
+		//解釈したPAYLOAD:DATA ["name"]の確認
 
-            header_x_token := r.Header.Get("x-token")
-            // //headerが読み込まれている確認
-            // fmt.Println(header_x_token)
+		// fmt.Println(claims["name"].(string))
+		// claims_id := claims["id"]
+		// fmt.Println(claims_id)
 
+		var user NewUser
+		user.ID = int(claims["id"].(float64))
+		user.Name = claims["name"].(string)
+		// json_res, _ := json.Marshal(user)
+		// fmt.Println(string(json_res))
+		// fmt.Println(user.ID)
 
-            //tokenの解釈
-            token, err := jwt.Parse(header_x_token, func(token *jwt.Token) (interface{}, error) {
-                return []byte("himitu"), nil // CreateTokenにて指定した文字列を使います
-            })
-            if err != nil {
-                log.Fatal(err)
-            }
-            claims := token.Claims.(jwt.MapClaims)
-            //解釈したPAYLOAD:DATA ["name"]の確認
+		str_id := strconv.Itoa(user.ID)
+		// fmt.Println(str_id)
 
-            // fmt.Println(claims["name"].(string))
-            // claims_id := claims["id"]
-            // fmt.Println(claims_id)
+		//mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
+		db, err := sql.Open("mysql", "root@/ca_tech_dojo")
+		log.Println("Connected to mysql.")
 
+		//接続でエラーが発生した場合の処理
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
 
-            var user NewUser
-            user.ID = int(claims["id"].(float64))
-            user.Name = claims["name"].(string)
-            // json_res, _ := json.Marshal(user)
-            // fmt.Println(string(json_res))
-            // fmt.Println(user.ID)
+		//データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
+		// rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
+		rows, err := db.Query("UPDATE user SET name ='" + string(rename.Name) + "' WHERE id = " + str_id + ";")
+		// rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
+		defer rows.Close()
+		if err != nil {
+			panic(err.Error())
+		}
 
-            str_id := strconv.Itoa(user.ID)
-            // fmt.Println(str_id)
+	default:
+		// w.WriteHeader(http.StatusMethodNotAllowed)
+		fmt.Fprint(w, "Method not allowed.\n")
 
+		// ody := r.Body
 
-                //mysqlへ接続。ドライバ名（mysql）と、ユーザー名・データソース(ここではgosample)を指定。
-            db, err := sql.Open("mysql", "root@/ca_tech_dojo")
-            log.Println("Connected to mysql.")
-
-            //接続でエラーが発生した場合の処理
-            if err != nil {
-                log.Fatal(err)
-            }
-            defer db.Close()
-
-            //データベースへクエリを送信。引っ張ってきたデータがrowsに入る。
-            // rows, err := db.Query("INSERT USER VALUES (1, " + string(hello.Name) + ",'Kyoto');")
-            rows, err := db.Query("UPDATE user SET name ='" + string(rename.Name) + "' WHERE id = " + str_id + ";")
-            // rows, err := db.Query(fmt.Sprintf("INSERT USER VALUES (1, " + "Satou" + ", 'Kyoto');"))
-            defer rows.Close()
-            if err != nil {
-                panic(err.Error())
-            }
-
-            
-
-
-
-
-        default:
-            // w.WriteHeader(http.StatusMethodNotAllowed)
-            fmt.Fprint(w, "Method not allowed.\n")
-
-            // ody := r.Body
-
-    }
+	}
 }
