@@ -4,23 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	// ?
 	"bytes"
-	// ?
 	"io"
-
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
-
 	jwt "github.com/dgrijalva/jwt-go"
 	"strconv"
 )
 
 var secretKey = "himitu"
 
-// jsonのSchema
-type InputJsonSchema struct {
+type UserName struct {
 	Name string `json:"name"`
 }
 
@@ -28,26 +23,24 @@ type NewUser struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
+
 type Token struct {
 	Token string `json:"token"`
 }
 
 func Create(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Fprintf(w, "<h1>Test</h1>")
-
 	switch r.Method {
 
 	case http.MethodPost:
-
-		fmt.Fprint(w, "POST hello!\n")
+		
 		body := r.Body
 		defer body.Close()
 		buf := new(bytes.Buffer)
 		io.Copy(buf, body)
-		var hello InputJsonSchema
-		json.Unmarshal(buf.Bytes(), &hello)
-		fmt.Printf("POST hello! %s \n", string(hello.Name))
+		var UserData UserName
+		json.Unmarshal(buf.Bytes(), &UserData)
+		fmt.Printf("POST hello! %s \n", string(UserData.Name))
 
 		db, err := sql.Open("mysql", "root@/ca_tech_dojo")
 		log.Println("Connected to mysql.")
@@ -57,7 +50,7 @@ func Create(w http.ResponseWriter, r *http.Request) {
 		}
 		defer db.Close()
 
-		rows, err := db.Query("INSERT INTO USER(name,token) VALUES ('" + string(hello.Name) + "','init');")
+		rows, err := db.Query("INSERT INTO USER(name,token) VALUES ('" + string(UserData.Name) + "','init');")
 		defer rows.Close()
 		if err != nil {
 			panic(err.Error())
@@ -157,7 +150,7 @@ func Get(w http.ResponseWriter, r *http.Request) {
 
 		for rows.Next() {
 
-			var res_data InputJsonSchema
+			var res_data UserName
 			err := rows.Scan(&res_data.Name)
 			res_json, _ := json.Marshal(res_data)
 
@@ -187,7 +180,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 		buf := new(bytes.Buffer)
 		io.Copy(buf, body)
 
-		var rename InputJsonSchema
+		var rename UserName
 		json.Unmarshal(buf.Bytes(), &rename)
 
 		header_x_token := r.Header.Get("x-token")
