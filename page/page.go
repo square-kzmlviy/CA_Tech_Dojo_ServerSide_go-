@@ -44,22 +44,21 @@ func Create(w http.ResponseWriter, r *http.Request) {
 
 		db, err := sql.Open("mysql", "root@/ca_tech_dojo")
 		log.Println("Connected to mysql.")
-
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
 		}
 		defer db.Close()
 
 		rows, err := db.Query("INSERT INTO USER(name,token) VALUES ('" + string(UserData.Name) + "','init');")
-		defer rows.Close()
 		if err != nil {
-			panic(err.Error())
-		}
+			log.Print(err)
+		}		
+		defer rows.Close()
 
 		rows_out_user, err_out_user := db.Query("SELECT id,name FROM user ORDER BY id DESC LIMIT 1;")
 		defer rows_out_user.Close()
 		if err_out_user != nil {
-			panic(err_out_user.Error())
+			log.Print(err_out_user)
 		}
 		var person NewUser
 		for rows_out_user.Next() {
@@ -68,7 +67,7 @@ func Create(w http.ResponseWriter, r *http.Request) {
 			sample_json, _ := json.Marshal(person)
 
 			if err != nil {
-				panic(err_out_user.Error())
+				log.Print(err_out_user)
 			}
 			fmt.Println(person.ID, person.Name)
 			fmt.Println(string(sample_json))
