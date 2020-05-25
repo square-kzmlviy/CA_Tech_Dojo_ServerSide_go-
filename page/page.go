@@ -49,11 +49,12 @@ func Create(w http.ResponseWriter, r *http.Request) {
 		}
 		defer db.Close()
 
-		rows, err := db.Query("INSERT INTO USER(name,token) VALUES ('" + string(UserData.Name) + "','init');")
+		// rows, err := db.Query("INSERT INTO USER(name,token) VALUES ('" + string(UserData.Name) + "','init');")
+		_, err = db.Exec("INSERT INTO USER(name,token) VALUES ('" + string(UserData.Name) + "','init');")
 		if err != nil {
 			log.Print(err)
 		}		
-		defer rows.Close()
+		// defer rows.Close()
 
 		rows_out_user, err_out_user := db.Query("SELECT id,name FROM user ORDER BY id DESC LIMIT 1;")
 		defer rows_out_user.Close()
