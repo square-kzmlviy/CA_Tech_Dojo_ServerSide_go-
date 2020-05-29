@@ -53,29 +53,25 @@ func Create(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 		}		
 
-		rows_out_user, err_out_user := db.Query("SELECT id,name FROM user ORDER BY id DESC LIMIT 1;")
-		// defer rows_out_user.Close()
-		if err_out_user != nil {
-			log.Print(err_out_user)
+		var user NewUser
+
+
+		if err := db.QueryRow("SELECT id,name FROM user ORDER BY id DESC LIMIT 1;").Scan(&user.ID, &user.Name); err != nil {
+			log.Print(err)
 		}
-		var person NewUser
-		for rows_out_user.Next() {
-
-			err := rows_out_user.Scan(&person.ID, &person.Name)
-			sample_json, _ := json.Marshal(person)
-
-			if err != nil {
-				log.Print(err_out_user)
-			}
-			fmt.Println(person.ID, person.Name)
-			fmt.Println(string(sample_json))
+		if err != nil {
+			log.Print(err)
 		}
 
-		//認証
+		sample_json, _ := json.Marshal(user)
+		fmt.Println(user.ID, user.Name)
+		fmt.Println(string(sample_json))
+	
+
 		//アルゴリズムの指定
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"id":   person.ID,
-			"name": person.Name,
+			"id":   user.ID,
+			"name": user.Name,
 		})
 
 		//トークンに対して署名
